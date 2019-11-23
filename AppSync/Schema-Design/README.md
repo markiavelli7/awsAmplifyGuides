@@ -1,3 +1,46 @@
+## One-to-One Relationship
+
+```graphql
+type Department @model {
+  id: ID!
+  name: String
+  manager: Employee @connection
+}
+
+type Employee @model {
+  id: ID!
+  name: String
+  age: Int
+}
+```
+
+To make a one-to-one relationship (Department has one manager, which is an Employee), we use the @connection AppSync directive. We make a connection on the manager field to the Employee type.
+
+```graphql
+  manager: Employee @connection
+```
+
+When Amplify compiles our schema and sees the Department type with the @model directive, it's going to create the Department table in DynamoDB with an id, name, and manager attributes. It is also going to create another reference for the manager by adding an attribute called #managerId. So the Department table contains a reference to the #managerId.
+
+## One-to-Many Relationship
+
+```graphql
+type Department @model {
+  id: ID!
+  name: String
+  manager: Employee @connection
+  employees: [Employee]! @connection(name: "DepartmentEmployees")
+}
+
+type Employee @model {
+  id: ID!
+  name: String
+  age: Int
+  department: Department @connection(name: "DepartmentEmployees")
+}
+```
+
+In this case, we have a one-to-many relationship (a Department can have many Employees). When we create an employee in the employee table, we should have an attribute called departmentId
 # AppSync Schema Design
 
 Schema files are text files, usually named schema.graphql. We can create this file and submit it to AWS AppSync by using the CLI or navigating to the console and adding the following under the Schema page:
@@ -235,47 +278,3 @@ enum TodoStatus {
 Note that the *Comment* type has the *todoid* that it's associated with, *commentid*, and *content*. This corresponds to a primary key + sort key combination in the Amazon DynamoDB table we create later.
 
 The application graph on top of our existing data sources in AWS AppSync enables us to return data from two separate data sources in a single GraphQL query. In the example, the assumption is that there is both a Todos table and a Comments table.
-
-## One-to-One Relationship
-
-```graphql
-type Department @model {
-  id: ID!
-  name: String
-  manager: Employee @connection
-}
-
-type Employee @model {
-  id: ID!
-  name: String
-  age: Int
-}
-```
-
-To make a one-to-one relationship (Department has one manager, which is an Employee), we use the @connection AppSync directive. We make a connection on the manager field to the Employee type.
-
-```graphql
-  manager: Employee @connection
-```
-
-When Amplify compiles our schema and sees the Department type with the @model directive, it's going to create the Department table in DynamoDB with an id, name, and manager attributes. It is also going to create another reference for the manager by adding an attribute called #managerId. So the Department table contains a reference to the #managerId.
-
-## One-to-Many Relationship
-
-```graphql
-type Department @model {
-  id: ID!
-  name: String
-  manager: Employee @connection
-  employees: [Employee]! @connection(name: "DepartmentEmployees")
-}
-
-type Employee @model {
-  id: ID!
-  name: String
-  age: Int
-  department: Department @connection(name: "DepartmentEmployees")
-}
-```
-
-In this case, we have a one-to-many relationship (a Department can have many Employees). When we create an employee in the employee table, we should have an attribute called departmentId
