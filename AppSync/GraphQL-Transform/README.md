@@ -29,7 +29,7 @@ When used along with tools like the Amplify CLI, the GraphQL Transform simplifie
 
 # Directives
 
-## @model
+# @model
 
 Object types that are annotated with *@model* are top-level entities in the generated API. Objects annotated with *@model* are stored in Amazon DynamoDB and are capable of being protected via *@auth*, related to other objects via *@connection*, and streamed into Amazon Elasticsearch via *@searchable*. We may also apply the *@versioned* directive to instantly add a version field and conflict detection to a model type.
 
@@ -84,7 +84,7 @@ type MetaData {
 enum Category { comedy news }
 ```
 
-## @key
+# @key
 
 The *@key* directive makes it simple to configure custom index structures for *@model* types.
 
@@ -219,3 +219,21 @@ There are a few important things to think about when making changes to APIs usin
 2. If adding a @key with 3 or more fields, we will need to back-fill the new composite sort key for existing data. With a *@key(fields: ["email", "status", "date"])*, we would need to backfill the *status#date* field with composite key vaules made up of each object's *status* and *date* fields joined with a *#*. We do not need to backfill data for *@key* directives with 1 or 2 fields.
 3. Deploy our additive changes and update any downstream applications to use the new access pattern.
 4. Once we are certain taht we do not need the old index, remove its *@key* and deploy the API again.
+
+# @connection
+
+The *@connection* directive enables us to specify relationships between *@model* types. Currently, this supports one-to-one, one-to-many, and many-to-one relationships. We may implement many-to-many relationships using two one-to-many connections and a joining *@model* type. See the usage section for details.
+
+## Definition
+
+```graphql
+directive @connection(keyName: String, fields: [String!]) on FIELD_DEFINITION
+```
+
+## Usage
+
+Relationships between types are specified by annotating fields on an *@model* object type with the *@connection* directive.
+
+The *fields* argument can be provided and indicates which fields can be queried by to get connected objects. The *keyName* argument can optionally be used to specify the name of secondary index (an index that was set up using *@key*) that should be queried from the other type in the relationship.
+
+When specifying a *keyName*, the *fields* argument should be provided to indicate with field(s) will be used to get connected objects. If *keyName* is not provided, then *@connection* queries the target table's primary index.
