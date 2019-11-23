@@ -4,7 +4,7 @@
 
 **@connection** - Enables a relationships between GraphQL types
 
-**@key** - Enables effectient queries with conditions by using underlying database index structures for optimization
+**@key** - Enables effecient queries with conditions by using underlying database index structures for optimization
 
 Let's say that we have basic GraphQL types that look like this:
 
