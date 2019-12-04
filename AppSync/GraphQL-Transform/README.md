@@ -237,3 +237,175 @@ Relationships between types are specified by annotating fields on an *@model* ob
 The *fields* argument can be provided and indicates which fields can be queried by to get connected objects. The *keyName* argument can optionally be used to specify the name of secondary index (an index that was set up using *@key*) that should be queried from the other type in the relationship.
 
 When specifying a *keyName*, the *fields* argument should be provided to indicate with field(s) will be used to get connected objects. If *keyName* is not provided, then *@connection* queries the target table's primary index.
+
+### Has One
+
+In the simplest case, we can define a one-to-one connection where a project has one team:
+
+```graphql
+type Project @model {
+  id: ID!
+  name: String
+  team: Team @connection
+}
+
+type Team @model {
+  id: ID!
+  name: String
+}
+```
+
+We can also define the field we would like to use for the connection by populating the first argument to the fields array and matching it to a field on the type:
+
+```graphql
+type Project @model {
+  id: ID!
+  name: String
+  teamID: ID!
+  team: Team @connection(fields: ["teamID"])
+}
+
+type Team @model {
+  id: ID!
+  name: String!
+}
+```
+
+In this case, the **Project** type has a *teamID* field added as an identifier for the team that the project belongs to. *@connection* can then get the connected Team object by querying the Tam table with this *teamID*.
+
+After it's transformed, we can create projects and query the connected team as follows:
+
+```graphql
+mutation CreateProject {
+  createProject(input: {name: "New Project", teamID: "a-team-id"}) {
+    id
+    name
+    team {
+      id
+      name
+    }
+  }
+}
+```
+
+**Note**: The **Project.team** resolver is configured to work with the the defined connection. This is done with a query on the Team table where *teamID* is passed in as an argument to the mutation.
+
+Likewise, we can make a simple one-to-many connection as follows for a post that has many comments:
+
+## Has Many
+
+```graphql
+type Post @model {
+  id: ID!
+  title: String!
+  comments: [Comment] @connection(keyName: "byPost", fields: ["id"])
+}
+
+type Comment @model
+  @key(name: "byPost", fields: ["postID", "content"]) {
+    id: ID!
+    postID: ID!
+    content: String!
+  }
+```
+
+Not how a one-to-many connection *@key* that allows comments to be queried by the *postID* and the connection uses this key to get all the comments whose *postID* is the id of the post was called on. After it's transformed, we can create comments and query the connected *Post* as follows:
+
+```graphql
+mutation CreatePost {
+  createPost(input: {id: "a-post-id", title: "Post Title"}) {
+    id
+    title
+  }
+}
+
+mutation CreateCommentOnPost {
+  createComment(input: {id: "a-comment-id", content: "A comment", postID: "a-post-id"}) {
+    id
+    content
+  }
+}
+```
+
+And we can query a *Post* with its comments as follows:
+
+```graphql
+query getPost {
+  getPost(id: "a-post-id") {
+    id
+    title
+    comments {
+      items {
+        id
+        content
+      }
+    }
+  }
+}
+```
+
+## Belongs To
+
+We can make a connection bi-directional by adding a many-to-one connection to types that already have a one-to-many connection. In this case, we add a connection from Comment to Post since each comment belongs to a post:
+
+```graphql
+type Post @model {
+  id: ID!
+  title: String!
+  comments: [Comment] @connection(keyName: "byPost", fields: ["id"])
+}
+
+type Comment @model
+  @key(name: "byPost", fields: ["postID", "content"]) {
+  id: ID!
+  postID: ID!
+  content: String!
+  post: Post @connection(fields: [postID])
+}
+```
+
+After it's transformed, we can create comments with a post as follows:
+
+```graphql
+mutation CreatePost {
+  createPost(input: {id: "a-post-id", title: "Post Title"}) {
+    id
+    title
+  }
+}
+
+mutation CreateCommentOnPost1 {
+  createComment(input: {id: "a-comment-id-1", content: "A comment #1", postID: "a-post-id"}) {
+    id
+    content
+  }
+}
+
+mutation CreateCommentOnPost2 {
+  createComment(input: {id: "a-comment-id-2", content: "A comment #2", postID: "a-post-id"}) {
+    id
+    content
+  }
+}
+```
+
+And we can query a *Comment* with its *Post*, then all *Comments* of that *Post* by navigating the connection:
+
+```graphql
+query GetCommentWithPostAndComments {
+  getComment(id: "a-comment-id-1") {
+    id
+    content
+    post {
+      id
+      title
+      comments {
+        items {
+          id
+          content
+        }
+      }
+    }
+  }
+}
+```
